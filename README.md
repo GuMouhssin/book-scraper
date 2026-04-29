@@ -53,7 +53,7 @@ Scraped 1000 books.
 
 ## Use cases
 
-- Data collection for analysis
-- Price monitoring
-- Building book databases
--Export clean datasets for Excel or data tools
+- Collect book data for research or analysis
+- Build a searchable book database
+- Monitor prices across categories
+- Export clean datasets for Excel or data tools
