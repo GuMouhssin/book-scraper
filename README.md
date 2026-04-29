@@ -56,4 +56,4 @@ Scraped 1000 books.
 - Data collection for analysis
 - Price monitoring
 - Building book databases
-- Portfolio demonstration of web scraping skills
+-Export clean datasets for Excel or data tools
