@@ -8,20 +8,22 @@ import csv
 
 #VARs;
 base_url = "https://books.toscrape.com/"
+headers = {
+    "User-Agent":"Mozilla/5.0"
+}
 
 #functions:
 def get_books_links(url):
+    print("--------Collecting books Links--------")
     i = 1
     page = url
     links = []
     while page:
         try:
-            resp = requests.get(page)
-        except requests.exceptions.ConnectionError:
-            print("No internet connection.")
-            break
-        if resp.status_code != 200:
-            print(f"ERROR fetching page {i}")
+            resp = requests.get(page, headers = headers, timeout = 10)
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"ERROR: {e} --URL: {page}")
             break
         print(f"Collecting links from page-{i}")
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -40,19 +42,18 @@ def get_books_links(url):
 
 def parse_product_page(url):
     try:
-        resp = requests.get(url)
-    except requests.exceptions.ConnectionError:
-        print("No internet connection.")
+        resp = requests.get(url, headers = headers, timeout = 10)
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: {e} --URL: {url}")
         return
-    if resp.status_code != 200:
-        print(f"Error fetching page: {url}")
-        return None
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
     book = soup.find("div", class_="col-sm-6 product_main")
 
     if not book:
+        print(f"Parsing failled: {url}")
         return None
 
     # Title
@@ -85,13 +86,13 @@ def parse_product_page(url):
             category = LIs[2].text.strip()
 
     return {
-        "title": title,
-        "price": price,
-        "rating": rating,
-        "availability": availability,
+        "title": title.strip(),
+        "price": price.replace("Â", "").strip(),
+        "rating": rating.strip(),
+        "availability": availability.strip(),
         "description": description,
-        "category": category,
-        "url": url
+        "category": category.strip(),
+        "url": url.strip()
     }
 
 def scrape_all_books(start_url):
@@ -106,7 +107,7 @@ def scrape_all_books(start_url):
         if book:
             data.append(book)
 
-        time.sleep(0.5)  # avoid being blocked
+        time.sleep(1) 
     return data
 
 
@@ -156,7 +157,6 @@ if __name__ == "__main__":
         choice = input("Choose an option: ").strip()
 
         if choice == "1":
-            print("--------Collecting books Links--------")
             books = scrape_all_books(start_url)
             print(f"Scraped {len(books)} books.")
 
