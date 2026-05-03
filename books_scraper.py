@@ -12,19 +12,36 @@ headers = {
     "User-Agent":"Mozilla/5.0"
 }
 
+#config:
+Delay = 1
+Max_retries = 3
+
 #functions:
+
+def fetch(url):
+    last_error = None
+    for i in range(Max_retries):
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            return resp
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            print(f"{i+1} retry for: {url}")
+            time.sleep(2)
+
+    print(f"ERROR: {last_error} -- URL: {url}")
+    return None
+
 def get_books_links(url):
     print("--------Collecting books Links--------")
     i = 1
     page = url
     links = []
     while page:
-        try:
-            resp = requests.get(page, headers = headers, timeout = 10)
-            resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"ERROR: {e} --URL: {page}")
-            break
+        resp = fetch(page)
+        if not resp:
+            continue
         print(f"Collecting links from page-{i}")
         soup = BeautifulSoup(resp.text, "html.parser")
         books = soup.find_all("article", class_ = "product_pod")
@@ -41,12 +58,10 @@ def get_books_links(url):
     return links
 
 def parse_product_page(url):
-    try:
-        resp = requests.get(url, headers = headers, timeout = 10)
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: {e} --URL: {url}")
-        return
+    resp = fetch(url)
+    if not resp:
+        print(f"Parsing failled: {url}")
+        return None
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -97,6 +112,7 @@ def parse_product_page(url):
 
 def scrape_all_books(start_url):
     links = get_books_links(start_url)
+    print(f"Collected {len(links)} links.")
     data = []
     print("-------Starting scraping-------")
     for i, link in enumerate(links, start=1):
@@ -107,8 +123,25 @@ def scrape_all_books(start_url):
         if book:
             data.append(book)
 
-        time.sleep(1) 
+        time.sleep(Delay) 
     return data
+
+def scrape_by_category(start_url, category):
+    links = get_books_links(start_url)
+    print(f"Collected {len(links)} links.")
+    data = []
+    print("-------Starting scraping-------")
+    for i, link in enumerate(links, start=1):
+        print(f"Scraping {i}/{len(links)}")
+
+        book = parse_product_page(link)
+
+        if book and book["category"].lower() == category.lower():
+            data.append(book)
+
+        time.sleep(Delay) 
+    return data
+
 
 
 def save_json(data, filename = "books"):
@@ -152,7 +185,8 @@ if __name__ == "__main__":
         print("2. Save to JSON")
         print("3. Save to CSV")
         print("4. Search books")
-        print("5. Exit")
+        print("5. Scraping by categories")
+        print("6. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -183,6 +217,11 @@ if __name__ == "__main__":
                 print("No data available. Scrape first.")
 
         elif choice == "5":
+            category = input("Enter a category: ")
+            books = scrape_by_category(start_url,  category)
+            print(f"Scraped {len(books)} books of {category} category.")
+
+        elif choice == "6":
             print("Exiting program.")
             break
 
